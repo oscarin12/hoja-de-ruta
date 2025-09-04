@@ -1,0 +1,7 @@
+{
+  "name": "hoja-de-ruta",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
