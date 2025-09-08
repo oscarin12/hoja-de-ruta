@@ -1,0 +1,17 @@
+.map-container {
+height: 300px;
+width: 100%;
+border-radius: 12px;
+overflow: hidden;
+}
+
+
+.btns {
+display: grid;
+gap: 8px;
+margin-top: 12px;
+}
+/* que todos los botones de menú sean azules */
+ion-menu-button {
+  --color: var(--ion-color-primary);
+}

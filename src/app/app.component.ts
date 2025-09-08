@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
@@ -6,14 +7,20 @@ import { Component } from '@angular/core';
   standalone: false,
 })
 export class AppComponent {
+
+
+  async ngOnInit() {
+    try {
+      await StatusBar.setOverlaysWebView({ overlay: false }); // empuja la webview hacia abajo
+      await StatusBar.setStyle({ style: Style.Dark });        // opcional
+    } catch {}
+  }
   public appPages = [
-    { title: 'Inbox', url: '/folder/inbox', icon: 'mail' },
-    { title: 'Outbox', url: '/folder/outbox', icon: 'paper-plane' },
-    { title: 'Favorites', url: '/folder/favorites', icon: 'heart' },
-    { title: 'Archived', url: '/folder/archived', icon: 'archive' },
-    { title: 'Trash', url: '/folder/trash', icon: 'trash' },
-    { title: 'Spam', url: '/folder/spam', icon: 'warning' },
+   
+    { title: 'Hoja de Ruta', url: '/hoja-ruta', icon: 'map' },
   ];
-  public labels = ['Family', 'Friends', 'Notes', 'Work', 'Travel', 'Reminders'];
+  public labels = ['proximos'];
+
+   public nombre = ['Oscar Medina'];
   constructor() {}
 }

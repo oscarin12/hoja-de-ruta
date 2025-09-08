@@ -1,0 +1,112 @@
+<ion-header>
+  <ion-toolbar > 
+    <ion-buttons slot="start">
+      <ion-menu-button menu="main" auto-hide="false" color="primary"></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Hoja de Ruta</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+
+<!-- fullscreen para respetar safe-areas -->
+<ion-content class="ion-padding" fullscreen>
+
+  <!-- Formulario -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Registro de Rutas Móviles</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+
+      <!-- Tipo de recorrido -->
+      <ion-item>
+        <ion-label>Tipo de Recorrido</ion-label>
+        <ion-select interface="popover" [(ngModel)]="routeType">
+          <ion-select-option value="17-normal">17 Normal</ion-select-option>
+          <ion-select-option value="17a">17A</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <!-- Día del recorrido (bloqueado, ya seteado en TS) -->
+      <ion-item>
+        <ion-label>Día del Recorrido</ion-label>
+        <ion-datetime
+          #dateEl
+          presentation="date"
+          [(ngModel)]="dayISO"
+          locale="es-CL"
+          [disabled]="true">
+        </ion-datetime>
+      </ion-item>
+
+      <!-- Inicio del recorrido -->
+      <ion-item>
+        <ion-label>Hora de Inicio:</ion-label>
+        <ion-label>{{ startTimeLabel }}</ion-label>
+      </ion-item>
+
+      <ion-item>
+        <ion-label><b>Distancia Recorrida:</b> {{ distanceLabel }}</ion-label>
+      </ion-item>
+
+      <!-- Controles -->
+      <div class="btns">
+        <ion-button expand="block" color="success" (click)="start()" [disabled]="isRunning">
+          Iniciar Registro
+        </ion-button>
+        <ion-button expand="block" color="primary" (click)="end()" [disabled]="!isRunning">
+          Finalizar Registro
+        </ion-button>
+      </div>
+
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Informe -->
+  <ion-card *ngIf="showReport" #reportEl class="printable">
+    <ion-card-header>
+      <ion-card-title>Informe de Ruta</ion-card-title>
+    </ion-card-header>
+
+    <ion-card-content>
+      <ion-list lines="none">
+        <ion-item><ion-label><b>Día:</b> {{ dayLabel }}</ion-label></ion-item>
+        <ion-item><ion-label><b>Hora de Inicio:</b> {{ startTimeLabel }}</ion-label></ion-item>
+        <ion-item><ion-label><b>Hora de Fin:</b> {{ endTimeLabel }}</ion-label></ion-item>
+        <ion-item><ion-label><b>Duración:</b> {{ durationMinutes }} minutos</ion-label></ion-item>
+        <ion-item><ion-label><b>Distancia Recorrida:</b> {{ distanceLabel }}</ion-label></ion-item>
+        <ion-item><ion-label><b>Tipo de Recorrido:</b> {{ routeLabel }}</ion-label></ion-item>
+        <ion-item><ion-label><b>Lugar de Inicio:</b> {{ startPlace }}</ion-label></ion-item>
+        <ion-item *ngIf="startCoords">
+          <ion-label>({{ startCoords.lat | number:'1.5-5' }}, {{ startCoords.lng | number:'1.5-5' }})</ion-label>
+        </ion-item>
+        <ion-item><ion-label><b>Lugar de Término:</b> {{ endPlace }}</ion-label></ion-item>
+        <ion-item *ngIf="endCoords">
+          <ion-label>({{ endCoords.lat | number:'1.5-5' }}, {{ endCoords.lng | number:'1.5-5' }})</ion-label>
+        </ion-item>
+      </ion-list>
+
+      <!-- PDF térmica 60mm -->
+      <ion-button expand="block" color="tertiary" (click)="downloadReportPdf('60mm')">
+        Descargar PDF de Hoja de Ruta
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Mapa -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Mapa de Ruta</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div #mapEl class="map-container"></div>
+      <ion-text color="medium">
+        <p class="ion-margin-top ion-text-center ion-no-margin ion-text-wrap">
+          Nota: El mapa muestra una ruta aproximada. Ajusta según tu ubicación real.
+        </p>
+      </ion-text>
+      <ion-button size="small" (click)="enableAutoFollow()">Seguir</ion-button>
+    </ion-card-content>
+  </ion-card>
+
+</ion-content>

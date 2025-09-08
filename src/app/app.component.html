@@ -1,14 +1,21 @@
 <ion-app>
   <ion-split-pane contentId="main-content">
-    <ion-menu contentId="main-content" type="overlay">
+    <!-- Le damos un ID explícito al menú -->
+    <ion-menu contentId="main-content" menuId="main" type="overlay" side="start">
       <ion-content>
         <ion-list id="inbox-list">
-          <ion-list-header>Inbox</ion-list-header>
-          <ion-note>hi&#64;ionicframework.com</ion-note>
+          <ion-list-header>Menu</ion-list-header>
+          <ion-note>{{nombre}}</ion-note>
 
           @for (p of appPages; track p; let i = $index) {
             <ion-menu-toggle auto-hide="false">
-              <ion-item routerDirection="root" [routerLink]="[p.url]" lines="none" detail="false" routerLinkActive="selected">
+              <ion-item
+                routerDirection="root"
+                [routerLink]="[p.url]"
+                lines="none"
+                detail="false"
+                routerLinkActive="selected"
+              >
                 <ion-icon aria-hidden="true" slot="start" [ios]="p.icon + '-outline'" [md]="p.icon + '-sharp'"></ion-icon>
                 <ion-label>{{ p.title }}</ion-label>
               </ion-item>
@@ -18,7 +25,6 @@
 
         <ion-list id="labels-list">
           <ion-list-header>Labels</ion-list-header>
-
           @for (label of labels; track label) {
             <ion-item lines="none">
               <ion-icon aria-hidden="true" slot="start" ios="bookmark-outline" md="bookmark-sharp"></ion-icon>
@@ -28,6 +34,8 @@
         </ion-list>
       </ion-content>
     </ion-menu>
+
+    <!-- IMPORTANTE: el id debe coincidir con contentId del menú -->
     <ion-router-outlet id="main-content"></ion-router-outlet>
   </ion-split-pane>
 </ion-app>

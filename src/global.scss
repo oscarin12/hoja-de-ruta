@@ -35,3 +35,28 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import "@ionic/angular/css/palettes/dark.system.css";
+/* Leaflet CSS */
+@import "leaflet/dist/leaflet.css";
+
+
+/* ==== Estilos de impresión del informe ==== */
+@media print {
+/* Oculta todo menos el informe */
+body * { visibility: hidden !important; }
+.printable, .printable * { visibility: visible !important; }
+.printable {
+position: absolute; left: 0; top: 0; width: 100%; background: white; padding: 16px; box-shadow: none;
+}
+}
+/* Asegura un espacio cómodo entre la status bar y el toolbar */
+ion-header,
+ion-toolbar {
+  padding-top: calc(var(--ion-safe-area-top) ); /* +8px extra de aire */
+}
+
+/* Ajusta el alto para que no se comprima el contenido */
+ion-toolbar {
+  min-height: 56px;
+  --padding-start: 12px;
+  --padding-end: 12px;
+}
