@@ -25,7 +25,7 @@ export class HojaRutaPage implements AfterViewInit {
 
   // Estado del formulario
   routeType: '17-normal' | '17a' = '17-normal';
-  dayISO: string = this.todayISODate(); 
+  dayISO: string = this.todayISODate();
 
   // Tiempos
   startTimestamp: Date | null = null;
@@ -91,7 +91,7 @@ export class HojaRutaPage implements AfterViewInit {
     });
   }
 
-  async ngAfterViewInit() {}
+  async ngAfterViewInit() { }
 
   ionViewDidEnter() {
     this.ngZone.runOutsideAngular(() => {
@@ -115,15 +115,15 @@ export class HojaRutaPage implements AfterViewInit {
 
       setTimeout(() => this.map.invalidateSize(), 60);
 
-      
+
       this.routeLayer = L.layerGroup().addTo(this.map);
 
-    
+
       this.centerFastThenAccurate()
         .then(() => this.startRefineWatch(30, 20000))
         .catch(() => this.startRefineWatch(30, 20000));
 
-    
+
       this.map.on('dragstart zoomstart', () => { this.isAutoFollow = false; });
     });
   }
@@ -241,7 +241,7 @@ export class HojaRutaPage implements AfterViewInit {
         const name: string = j?.display_name;
         if (name?.trim()) return name;
       }
-    } catch {}
+    } catch { }
 
     try {
       const r2 = await fetchWithTimeout(bdc);
@@ -252,7 +252,7 @@ export class HojaRutaPage implements AfterViewInit {
           .join(', ');
         if (line) return line;
       }
-    } catch {}
+    } catch { }
 
     return `(${lat.toFixed(5)}, ${lng.toFixed(5)})`;
   }
@@ -291,16 +291,18 @@ export class HojaRutaPage implements AfterViewInit {
       try {
         const p = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
         lat = p.coords.latitude; lng = p.coords.longitude;
-      } catch {}
+      } catch { }
     }
     if (lat != null && lng != null) {
       this.startCoords = { lat, lng };
       this.startPlace = await this.reverseGeocode(lat, lng);
       this.showToast('Inicio: ' + this.startPlace, 'success');
+      this.imprimirIniciodeRuta('60mm');
     } else {
       this.startPlace = '-';
       this.showToast('No se pudo tomar la ubicación de inicio', 'warning');
     }
+
   }
 
   // Finalizar
@@ -321,7 +323,7 @@ export class HojaRutaPage implements AfterViewInit {
       try {
         const p = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
         lat = p.coords.latitude; lng = p.coords.longitude;
-      } catch {}
+      } catch { }
     }
     if (lat != null && lng != null) {
       this.endCoords = { lat, lng };
@@ -331,6 +333,8 @@ export class HojaRutaPage implements AfterViewInit {
       this.endPlace = '-';
       this.showToast('No se pudo tomar la ubicación de término', 'warning');
     }
+
+
 
     this.showReport = true;
 
@@ -347,178 +351,172 @@ export class HojaRutaPage implements AfterViewInit {
           lineCap: 'round'
         }).addTo(target);
       }
-    } catch {}
+    } catch { }
   }
 
-  //  PDF 
-  async downloadReportPdf(mode: 'a4' | '58mm' | '60mm' = '60mm') {
-    // Cargar jsPDF
-    let jsPDFCtor: any;
+ // PDF (recibo compacto, sin espacio arriba)
+async downloadReportPdf(mode: 'a4' | '58mm' | '60mm' = '60mm') {
+  // Cargar jsPDF
+  let jsPDFCtor: any;
+  try {
+    const jsPdfMod = await import('jspdf');
+    jsPDFCtor = jsPdfMod.jsPDF || jsPdfMod.default || (jsPdfMod as any);
+  } catch {
+    this.showToast('Error cargando librería PDF', 'danger');
+    return;
+  }
+
+  // ===== Formato =====
+  const isA4 = mode === 'a4';
+  const is58 = mode === '58mm';
+  // Alto inicial cualquiera; lo recortamos al final
+  const format: any = isA4 ? 'a4' : (is58 ? [58, 180] : [60, 110]);
+  const pdf = new jsPDFCtor({ orientation: 'p', unit: 'mm', format });
+
+  // Márgenes MUY pequeños
+  const MX = isA4 ? 12 : 3;   // margen X
+  const MY = isA4 ? 1  : 2;   // margen Y  <<< más chico
+  const W  = pdf.internal.pageSize.getWidth() - MX * 2;
+
+  // Tipografías
+  const FS_TITLE   = isA4 ? 16   : 11;
+  const FS_LABEL   = isA4 ? 10.5 : 8.2;
+  const FS_VALUE   = isA4 ? 11.5 : 9.2;
+  const FS_SECTION = isA4 ? 12   : 9.2;
+  const FS_FOOT    = isA4 ? 10.5 : 8;
+
+  // Espaciados (compactos)
+  const GAP_SECTION = isA4 ? 3.0 : 2.0;
+  const GAP_ROW     = isA4 ? 2.0 : 1.2;
+  const INDENT      = 4;
+
+  let y = MY; // ¡arrancamos bien arriba!
+
+  // Helpers
+  const lineH = (txt: string | string[], size: number) => {
+    pdf.setFontSize(size);
+    const d = pdf.getTextDimensions(txt);
+    return d.h || (size * 0.42);
+  };
+  const wrap = (text: string) =>
+    pdf.splitTextToSize((text || '-').toString(), W - INDENT) as string[];
+
+  const addRow = (label: string, value: string) => {
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(FS_LABEL);
+    pdf.text(label + ':', MX, y);
+    y += lineH(label + ':', FS_LABEL);
+
+    const lines = wrap(value && value.trim() ? value : '-');
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(FS_VALUE);
+    for (const ln of lines) { pdf.text(ln, MX + INDENT, y); y += lineH(ln, FS_VALUE); }
+    y += GAP_ROW;
+  };
+
+  // ===== Cabecera (sin gap extra) =====
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(FS_TITLE);
+  const title = 'HOJA DE RUTA';
+  const tW = pdf.getTextWidth(title);
+  pdf.text(title, MX + (W - tW) / 2, y);
+  y += lineH(title, FS_TITLE); // no sumamos extra
+
+  // ===== Datos del Viaje =====
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(FS_SECTION);
+  pdf.text('Datos del Viaje', MX, y);
+  y += lineH('Datos del Viaje', FS_SECTION) + GAP_SECTION;
+
+  addRow('Conductor', 'Oscar Medina');
+  addRow('Día', this.dayLabel);
+  addRow('Tipo de Recorrido', this.routeLabel);
+  addRow('Terminal', this.terminalLabel);
+
+  // ===== Inicio =====
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(FS_SECTION);
+  pdf.text('Inicio', MX, y);
+  y += lineH('Inicio', FS_SECTION) + GAP_SECTION;
+
+  addRow('Hora de Inicio', this.startTimeLabel);
+  addRow('Lugar de Inicio', this.startPlace);
+ 
+
+  // ===== Final =====
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(FS_SECTION);
+  pdf.text('Final', MX, y);
+  y += lineH('Final', FS_SECTION) + GAP_SECTION;
+
+  addRow('Hora de Fin', this.endTimeLabel);
+  addRow('Duración', `${this.durationMinutes} minutos`);
+  addRow('Lugar de Término', this.endPlace);
+ 
+
+  // ===== Pie =====
+  const footer = `Generado: ${new Date().toLocaleString('es-CL')}`;
+  pdf.setFont('helvetica', 'italic'); pdf.setFontSize(FS_FOOT);
+  pdf.text(footer, MX, y);
+  y += lineH(footer, FS_FOOT);
+
+  // Recorte del alto pegado al contenido (2 mm de resguardo)
+  if (!isA4) {
+    const finalH = Math.max(Math.ceil(y + 2), 40);
+    const last = pdf.getNumberOfPages();
+    pdf.setPage(last);
+    const ps: any = pdf.internal.pageSize;
+    if (typeof ps.setHeight === 'function') ps.setHeight(finalH);
+    else ps.height = finalH;
+  }
+
+  // Guardar / Compartir
+  const fileName = `inicio-ruta-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.pdf`;
+  if (!Capacitor.isNativePlatform()) {
+    try { pdf.save(fileName); this.showToast('PDF descargado', 'success'); }
+    catch { this.showToast('No se pudo descargar el PDF', 'danger'); }
+    return;
+  }
+  try {
+    const dataUri = pdf.output('datauristring');
+    const base64 = dataUri.split(',')[1];
+    const res = await Filesystem.writeFile({
+      path: fileName, data: base64, directory: Directory.Cache, recursive: true
+    });
     try {
-      const jsPdfMod = await import('jspdf');
-      jsPDFCtor = jsPdfMod.jsPDF || jsPdfMod.default || (jsPdfMod as any);
-    } catch {
-      this.showToast('Error cargando librería PDF', 'danger');
-      return;
-    }
-
-    // Formato
-    const isA4 = mode === 'a4';
-    const is58 = mode === '58mm';
-    const format: any = isA4 ? 'a4' : (is58 ? [58, 180] : [60, 150]);
-
-    const pdf = new jsPDFCtor({ orientation: 'p', unit: 'mm', format });
-
-    // Márgenes y fuentes
-    const marginX = isA4 ? 14 : 4;
-    const marginY = isA4 ? 4 : 5;
-
-    const TITLE_SIZE = isA4 ? 20 : 18;
-    const LABEL_SIZE = isA4 ? 16 : 14;
-    const VALUE_SIZE = isA4 ? 18 : 15;
-
-    // Espaciados
-    const GAP_BETWEEN = isA4 ? 10 : 4; // entre label y value
-    const GAP_BLOCK = isA4 ? 1 : 1;    // entre bloques
-
-    // Geometría
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    const contentW = pageW - marginX * 2;
-    let y = marginY;
-
-    // Helper: salto de página
-    const addPageIfNoSpace = (needH: number) => {
-      if (y + needH > pageH - marginY) {
-        pdf.addPage(format, 'p');
-        y = marginY;
-      }
-    };
-
-    // Helper: bloque etiqueta + valor usando alturas reales
-    const addBlock = (label: string, value: string) => {
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(LABEL_SIZE);
-      const labelLines = pdf.splitTextToSize(label, contentW);
-      const labelBox = pdf.getTextDimensions(labelLines);
-
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(VALUE_SIZE);
-      const valueText = value && value.trim() ? value : '-';
-      const valueLines = pdf.splitTextToSize(valueText, contentW);
-      const valueBox = pdf.getTextDimensions(valueLines);
-
-      const needH = labelBox.h + GAP_BETWEEN + valueBox.h + GAP_BLOCK;
-      addPageIfNoSpace(needH);
-
-      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(LABEL_SIZE);
-      for (const ln of labelLines as string[]) {
-        pdf.text(ln, marginX, y);
-        y += pdf.getTextDimensions(ln).h;
-      }
-      y += GAP_BETWEEN;
-
-      pdf.setFont('helvetica', 'normal'); pdf.setFontSize(VALUE_SIZE);
-      for (const ln of valueLines as string[]) {
-        pdf.text(ln, marginX, y);
-        y += pdf.getTextDimensions(ln).h;
-      }
-      y += GAP_BLOCK;
-    };
-
-    // Título
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(TITLE_SIZE);
-    const ttlLines = pdf.splitTextToSize('Informe de Ruta', contentW);
-    const ttlBox = pdf.getTextDimensions(ttlLines);
-    addPageIfNoSpace(ttlBox.h + GAP_BLOCK);
-    for (const ln of ttlLines as string[]) {
-      pdf.text(ln, marginX, y);
-      y += pdf.getTextDimensions(ln).h;
-    }
-    y += GAP_BLOCK;
-
-    // Contenido 
-    addBlock('Conductor:', 'Oscar Medina');
-    addBlock('Día:', this.dayLabel);
-    addBlock('Hora de Inicio:', this.startTimeLabel);
-    addBlock('Hora de Fin:', this.endTimeLabel);
-    addBlock('Duración:', `${this.durationMinutes} minutos`);
-    addBlock('Distancia Recorrida:', this.distanceLabel);
-    addBlock('Tipo de Recorrido:', this.routeLabel);
-    addBlock('Lugar de Inicio:', this.startPlace);
-    addBlock('Lugar de Término:', this.endPlace);
-
-    // Pie
-    const footer = `Generado: ${new Date().toLocaleString('es-CL')}`;
-    pdf.setFont('helvetica', 'italic'); pdf.setFontSize(isA4 ? 12 : 11);
-    const footLines = pdf.splitTextToSize(footer, contentW);
-    const footBox = pdf.getTextDimensions(footLines);
-    addPageIfNoSpace(footBox.h);
-    for (const ln of footLines as string[]) {
-      pdf.text(ln, marginX, y);
-      y += pdf.getTextDimensions(ln).h;
-    }
-
-    // Recorte térmico
-    if (!isA4) {
-      const finalH = Math.max(Math.ceil(y + marginY), 20);
-      const last = pdf.getNumberOfPages();
-      pdf.setPage(last);
-      const ps: any = pdf.internal.pageSize;
-      if (typeof ps.setHeight === 'function') ps.setHeight(finalH);
-      else ps.height = finalH;
-    }
-
-    // Guardar / compartir
-    const fileName = `informe-ruta-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.pdf`;
-
-    if (!Capacitor.isNativePlatform()) {
-      try { pdf.save(fileName); this.showToast('PDF descargado', 'success'); }
-      catch { this.showToast('No se pudo descargar el PDF', 'danger'); }
-      return;
-    }
-
-    try {
-      const dataUri = pdf.output('datauristring');
-      const base64 = dataUri.split(',')[1];
-      const res = await Filesystem.writeFile({
-        path: fileName,
-        data: base64,
-        directory: Directory.Cache,
-        recursive: true
+      await Share.share({
+        title: 'Hoja de Ruta - Inicio',
+        text: 'Ticket de inicio y fin de ruta',
+        url: res.uri,
+        dialogTitle: 'Compartir PDF'
       });
-      try {
-        await Share.share({
-          title: 'Informe de Ruta',
-          text: 'Informe PDF generado desde la app',
-          url: res.uri,
-          dialogTitle: 'Compartir PDF'
-        });
-        this.showToast('PDF listo para compartir', 'success');
-      } catch {
-        this.showToast(`PDF guardado en: ${res.uri}`, 'warning');
-      }
+      this.showToast('PDF listo para compartir', 'success');
     } catch {
-      this.showToast('No se pudo guardar el PDF', 'danger');
+      this.showToast(`PDF guardado en: ${res.uri}`, 'warning');
     }
+  } catch {
+    this.showToast('No se pudo guardar el PDF', 'danger');
   }
+}
+
 
   //  Getters para plantilla 
   get startTimeLabel(): string {
     return this.startTimestamp
       ? this.startTimestamp.toLocaleTimeString('es-CL', {
-          hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-        })
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      })
       : '-';
   }
   get endTimeLabel(): string {
     return this.endTimestamp
       ? this.endTimestamp.toLocaleTimeString('es-CL', {
-          hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-        })
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      })
       : '-';
   }
-  get routeLabel(): string { return this.routeType === '17-normal' ? '17 Normal' : '17A'; }
+  get routeLabel(): string {
+    return this.routeType === '17-normal' ? '17: V.CAUPOLICAN ' : '17A:El CARMEN';
+  }
+  get terminalLabel(): string {
+    return this.routeType === '17-normal'
+      ? 'Terminal Tripiales - Pueblo Nuevo'
+      : 'Terminal Trapiales - Pueblo Nuevo';
+  }
   get dayLabel(): string {
     if (!this.dayISO) return '-';
     const [y, m, d] = this.dayISO.split('-').map(Number);
@@ -676,7 +674,7 @@ export class HojaRutaPage implements AfterViewInit {
       const data = await resp.json();
       const route = data?.matchings?.[0]?.geometry;
       if (!route || route.type !== 'LineString') return null;
-     
+
       return route.coordinates.map(([lon, lat]: [number, number]) => [lat, lon]);
     } catch {
       return null;
@@ -730,4 +728,147 @@ export class HojaRutaPage implements AfterViewInit {
     this.isAutoFollow = true;
     if (this.lastLatLng) this.maybeCenterOn(this.lastLatLng.lat, this.lastLatLng.lng);
   }
+
+  async imprimirIniciodeRuta(mode: 'a4' | '58mm' | '60mm' = '60mm') {
+    // Cargar jsPDF
+    let jsPDFCtor: any;
+    try {
+      const jsPdfMod = await import('jspdf');
+      jsPDFCtor = jsPdfMod.jsPDF || jsPdfMod.default || (jsPdfMod as any);
+    } catch {
+      this.showToast('Error cargando librería PDF', 'danger');
+      return;
+    }
+
+    // ===== Formato robusto (recibo) =====
+    const isA4 = mode === 'a4';
+    const is58 = mode === '58mm';
+    const format: any = isA4 ? 'a4' : (is58 ? [58, 180] : [60, 100]); // alto se recorta al final
+    const pdf = new jsPDFCtor({ orientation: 'p', unit: 'mm', format });
+
+    // Margen/medidas
+    const MX = isA4 ? 14 : 5;       // margen X
+    const MY = isA4 ? 12 : 6;       // margen Y
+    const W = pdf.internal.pageSize.getWidth() - MX * 2;
+
+    // Tipografías
+    const FS_TITLE = isA4 ? 16 : 11;
+    const FS_LABEL = isA4 ? 10.5 : 8.2;
+    const FS_VALUE = isA4 ? 11.5 : 9.2;
+    const FS_SECTION = isA4 ? 12 : 9.2;
+    const FS_FOOT = isA4 ? 11 : 8;
+
+    // Espaciados
+    const GAP_SECTION = isA4 ? 4 : 3;
+    const GAP_BLOCK = isA4 ? 3.5 : 2.2;  // entre etiqueta y valor
+    const GAP_ROW = isA4 ? 2.5 : 1.6;  // entre filas
+    const INDENT = 4;                 // sangría del valor
+
+    let y = MY;
+
+    // Helpers
+    const lineH = (txt: string | string[], size: number) => {
+      pdf.setFontSize(size);
+      const d = pdf.getTextDimensions(txt);
+      return d.h || (size * 0.42); // fallback defensivo
+    };
+
+    const wrap = (text: string) => pdf.splitTextToSize((text || '-').toString(), W - INDENT) as string[];
+
+    const addRow = (label: string, value: string) => {
+      // Etiqueta
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(FS_LABEL);
+      pdf.text(label + ':', MX, y);
+      y += lineH(label + ':', FS_LABEL);
+
+      // Valor (multilínea con sangría)
+      const lines = wrap(value && value.trim() ? value : '-');
+      pdf.setFont('helvetica', 'normal'); pdf.setFontSize(FS_VALUE);
+      for (const ln of lines) {
+        pdf.text(ln, MX + INDENT, y);
+        y += lineH(ln, FS_VALUE);
+      }
+      y += GAP_ROW;
+    };
+
+    // ===== Cabecera =====
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(FS_TITLE);
+    const title = 'HOJA DE RUTA · INICIO';
+    const tW = pdf.getTextWidth(title);
+    pdf.text(title, MX + (W - tW) / 2, y);
+    y += lineH(title, FS_TITLE) + 2;
+
+
+    // ===== Sección Datos del Viaje =====
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(FS_SECTION);
+    pdf.text('Datos del Viaje', MX, y);
+    y += lineH('Datos del Viaje', FS_SECTION) + GAP_SECTION;
+
+    addRow('Conductor', 'Oscar Medina');
+    addRow('Día', this.dayLabel);
+    addRow('Tipo de Recorrido', this.routeLabel);
+    addRow('Terminal', this.terminalLabel);
+
+
+
+    // ===== Sección Inicio =====
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(FS_SECTION);
+    pdf.text('Inicio', MX, y);
+    y += lineH('Inicio', FS_SECTION) + GAP_SECTION;
+
+    addRow('Hora de Inicio', this.startTimeLabel);
+    addRow('Lugar de Inicio', this.startPlace);
+    if (this.startCoords) {
+      addRow('Coordenadas', `${this.startCoords.lat.toFixed(5)}, ${this.startCoords.lng.toFixed(5)}`);
+    }
+
+    // ===== Pie =====
+
+    const footer = `Generado: ${new Date().toLocaleString('es-CL')}`;
+    pdf.setFont('helvetica', 'italic'); pdf.setFontSize(FS_FOOT);
+    pdf.text(footer, MX, y);
+    y += lineH(footer, FS_FOOT);
+
+    // Recorte del alto (muy importante para que no “desaparezca” contenido)
+    if (!isA4) {
+      const finalH = Math.max(Math.ceil(y + MY), 50);
+      const last = pdf.getNumberOfPages();
+      pdf.setPage(last);
+      const ps: any = pdf.internal.pageSize;
+      if (typeof ps.setHeight === 'function') ps.setHeight(finalH);
+      else ps.height = finalH;
+    }
+
+    // Guardar / Compartir
+    const fileName = `inicio-ruta-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.pdf`;
+    if (!Capacitor.isNativePlatform()) {
+      try { pdf.save(fileName); this.showToast('PDF descargado', 'success'); }
+      catch { this.showToast('No se pudo descargar el PDF', 'danger'); }
+      return;
+    }
+    try {
+      const dataUri = pdf.output('datauristring');
+      const base64 = dataUri.split(',')[1];
+      const res = await Filesystem.writeFile({
+        path: fileName, data: base64, directory: Directory.Cache, recursive: true
+      });
+      try {
+        await Share.share({
+          title: 'Hoja de Ruta - Inicio',
+          text: 'Ticket de inicio de ruta',
+          url: res.uri,
+          dialogTitle: 'Compartir PDF'
+        });
+        this.showToast('PDF listo para compartir', 'success');
+      } catch {
+        this.showToast(`PDF guardado en: ${res.uri}`, 'warning');
+      }
+    } catch {
+      this.showToast('No se pudo guardar el PDF', 'danger');
+    }
+  }
+
+
+
+
 }

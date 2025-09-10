@@ -22,7 +22,7 @@
       <ion-item>
         <ion-label>Tipo de Recorrido</ion-label>
         <ion-select interface="popover" [(ngModel)]="routeType">
-          <ion-select-option value="17-normal">17 Normal</ion-select-option>
+          <ion-select-option value="17-normal">17</ion-select-option>
           <ion-select-option value="17a">17A</ion-select-option>
         </ion-select>
       </ion-item>
@@ -71,11 +71,11 @@
     <ion-card-content>
       <ion-list lines="none">
         <ion-item><ion-label><b>Día:</b> {{ dayLabel }}</ion-label></ion-item>
+        <ion-item><ion-label><b>Tipo de Recorrido:</b> {{ routeLabel }}</ion-label></ion-item>
+        <ion-item><ion-label><b>Terminal:</b> {{ terminalLabel }}</ion-label></ion-item>        
         <ion-item><ion-label><b>Hora de Inicio:</b> {{ startTimeLabel }}</ion-label></ion-item>
         <ion-item><ion-label><b>Hora de Fin:</b> {{ endTimeLabel }}</ion-label></ion-item>
-        <ion-item><ion-label><b>Duración:</b> {{ durationMinutes }} minutos</ion-label></ion-item>
-        <ion-item><ion-label><b>Distancia Recorrida:</b> {{ distanceLabel }}</ion-label></ion-item>
-        <ion-item><ion-label><b>Tipo de Recorrido:</b> {{ routeLabel }}</ion-label></ion-item>
+        <ion-item><ion-label><b>Duración:</b> {{ durationMinutes }} minutos</ion-label></ion-item>        
         <ion-item><ion-label><b>Lugar de Inicio:</b> {{ startPlace }}</ion-label></ion-item>
         <ion-item *ngIf="startCoords">
           <ion-label>({{ startCoords.lat | number:'1.5-5' }}, {{ startCoords.lng | number:'1.5-5' }})</ion-label>
